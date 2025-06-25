@@ -1,77 +1,97 @@
 #!/bin/bash
 set -e
 
-# === Configuration ===
-DISK="/dev/sdb"
-HOSTNAME="archbox"
-USERNAME="aiden"
-PASSWORD="password" # Change after install
-LOCALE="en_US.UTF-8"
-TIMEZONE="America/New_York"
-ROOT_PART="${DISK}2"
-EFI_PART="${DISK}1"
-SWAP_PART="${DISK}3"
+echo "[*] Updating system..."
+sudo pacman -Syu --noconfirm
 
-# === Partition and format ===
-sgdisk -Z ${DISK}
-sgdisk -n1:0:+512M -t1:ef00 ${DISK}
-sgdisk -n2:0:0 -t2:8300 ${DISK}
-sgdisk -n3:0:+512M -t3:8200 ${DISK}
+echo "[*] Installing core packages..."
+sudo pacman -S --noconfirm xorg xorg-xinit i3-gaps alacritty zsh picom rofi feh dunst lxappearance \
+  network-manager-applet polybar neovim git curl unzip wget pipewire pipewire-pulse wireplumber \
+  ttf-jetbrains-mono ttf-nerd-fonts-symbols pavucontrol
 
-mkfs.fat -F32 ${EFI_PART}
-mkfs.ext4 ${ROOT_PART}
-mkswap ${SWAP_PART}
+echo "[*] Enabling networking..."
+sudo systemctl enable NetworkManager
 
-mount ${ROOT_PART} /mnt
-mkdir -p /mnt/boot
-mount ${EFI_PART} /mnt/boot
-swapon ${SWAP_PART}
+echo "[*] Installing Oh My Zsh + Powerlevel10k..."
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
-# === Install base system ===
-reflector --latest 10 --sort rate --protocol https --save /etc/pacman.d/mirrorlist
-pacstrap /mnt base linux linux-firmware sudo nano networkmanager grub efibootmgr git
+git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
+  ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
 
-# === Fstab ===
-genfstab -U /mnt >> /mnt/etc/fstab
+sed -i 's/^ZSH_THEME=.*/ZSH_THEME="powerlevel10k\/powerlevel10k"/' ~/.zshrc
 
-# === System Configuration ===
-arch-chroot /mnt /bin/bash <<EOF
-ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime
-hwclock --systohc
-echo "${LOCALE} UTF-8" > /etc/locale.gen
-locale-gen
-echo "LANG=${LOCALE}" > /etc/locale.conf
-echo "${HOSTNAME}" > /etc/hostname
-echo "127.0.1.1   ${HOSTNAME}.localdomain ${HOSTNAME}" >> /etc/hosts
+echo "[*] Setting Zsh as default shell..."
+chsh -s /bin/zsh
 
-# Set root password
-echo root:${PASSWORD} | chpasswd
+echo "[*] Configuring Alacritty..."
+mkdir -p ~/.config/alacritty
+cat > ~/.config/alacritty/alacritty.yml <<EOF
+font:
+  normal:
+    family: "JetBrainsMono Nerd Font"
+    size: 12.5
 
-# Create user
-useradd -m -G wheel -s /bin/bash ${USERNAME}
-echo ${USERNAME}:${PASSWORD} | chpasswd
-echo '%wheel ALL=(ALL:ALL) ALL' >> /etc/sudoers
-
-# Install bootloader
-grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
-grub-mkconfig -o /boot/grub/grub.cfg
-
-# Enable services
-systemctl enable NetworkManager
+colors:
+  primary:
+    background: '0x0f111a'
+    foreground: '0xf8f8f2'
+  normal:
+    black:   '0x212337'
+    red:     '0xff5555'
+    green:   '0x50fa7b'
+    yellow:  '0xf1fa8c'
+    blue:    '0xbd93f9'
+    magenta: '0xff79c6'
+    cyan:    '0x8be9fd'
+    white:   '0xbbbbbb'
 EOF
 
-# === KDE and Cyberpunk Theme (Optional 2nd stage) ===
-arch-chroot /mnt /bin/bash <<'EOF'
-pacman -S --noconfirm plasma kde-applications sddm konsole firefox dolphin
-systemctl enable sddm
-
-# Cyberpunk style setup (placeholder)
-mkdir -p /home/${USERNAME}/.config
-chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}
-
-# Sample theme placeholder
-echo -e "[General]\ntheme=Sweet" > /home/${USERNAME}/.config/kdeglobals
-
+echo "[*] Configuring Picom..."
+mkdir -p ~/.config/picom
+cat > ~/.config/picom/picom.conf <<EOF
+backend = "glx";
+vsync = true;
+blur:
+  method = "dual_kawase";
+  strength = 7;
+opacity-rule = [
+  "90:class_g = 'Alacritty'",
+  "95:class_g = 'Rofi'"
+];
+shadow = true;
+corner-radius = 8;
 EOF
 
-echo "INSTALL COMPLETE. Reboot after unmounting."
+echo "[*] Downloading Cyberpunk Rofi theme..."
+mkdir -p ~/.config/rofi/themes
+curl -o ~/.config/rofi/themes/cyberpunk.rasi \
+  https://raw.githubusercontent.com/adi1090x/rofi-themes/master/colors/cyberpunk.rasi
+
+echo "[*] Setting up i3 config..."
+mkdir -p ~/.config/i3
+cat > ~/.config/i3/config <<EOF
+set \$mod Mod4
+font pango:JetBrainsMono Nerd Font 10
+
+exec_always --no-startup-id feh --bg-scale ~/Pictures/wallpaper.jpg
+exec_always --no-startup-id picom --config ~/.config/picom/picom.conf
+exec_always --no-startup-id nm-applet
+exec_always --no-startup-id dunst
+
+bindsym \$mod+Return exec alacritty
+bindsym \$mod+d exec rofi -show drun -theme cyberpunk
+
+bindsym \$mod+Shift+e exec "i3-nagbar -t warning -m 'Exit?' -b 'Yes' 'i3-msg exit'"
+
+# Default i3 keybindings
+bindsym \$mod+Shift+r restart
+EOF
+
+echo "[*] Setting wallpaper..."
+mkdir -p ~/Pictures
+curl -L -o ~/Pictures/wallpaper.jpg "https://wallpaperaccess.com/full/19885.jpg"
+
+echo "[*] Creating .xinitrc for i3..."
+echo "exec i3" > ~/.xinitrc
+
+echo "[*] Installation complete. Reboot or run 'startx' to enter Cyberpunk i3."
