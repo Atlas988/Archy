@@ -1,0 +1,75 @@
+
+digraph cyberpunk_arch {
+    rankdir=LR;
+    bgcolor="#0c001b";
+    fontname="Fira Code";
+
+    node [
+        shape=rect,
+        fontname="Fira Code",
+        fontsize=12,
+        style="filled,rounded",
+        color="#e600e6",
+        fillcolor="#2b003f",
+        fontcolor="#ff99ff",
+        penwidth=2
+    ];
+
+    edge [
+        color="#ff33ff",
+        penwidth=1.5,
+        arrowsize=0.8
+    ];
+
+    subgraph cluster_boot {
+        label="🚀 Boot System";
+        style=filled;
+        fillcolor="#1a002f";
+        color="#cc00ff";
+
+        BIOS [label="🧬 BIOS / UEFI", shape=ellipse, fillcolor="#3d005c"];
+        GRUB [label="🪐 GRUB Bootloader"];
+        Kernel [label="🧠 Linux Kernel"];
+        Initramfs [label="📦 Initramfs"];
+        Systemd [label="⚙️ Systemd Init"];
+    }
+
+    subgraph cluster_core {
+        label="🧩 Core Services";
+        style=filled;
+        fillcolor="#220044";
+        color="#9900cc";
+
+        Network [label="🌐 NetworkManager"];
+        Login [label="👤 GDM / TTY"];
+        DBus [label="🔌 D-Bus"];
+        Journal [label="📜 Systemd Journal"];
+    }
+
+    subgraph cluster_user {
+        label="🧑‍💻 User Space";
+        style=filled;
+        fillcolor="#29004f";
+        color="#b300ff";
+
+        Xorg [label="🖥️ Xorg / Wayland"];
+        WM [label="🎛️ WM (i3 / Hyprland)"];
+        Terminal [label="🧮 Terminal (Kitty)"];
+        Shell [label="🌀 Shell (Zsh / Bash)"];
+        Editor [label="📝 Editor (Neovim / Code)"];
+        Browser [label="🌍 Browser (Firefox / Chromium)"];
+        FileMgr [label="🗂️ File Manager (Thunar)"];
+    }
+
+    BIOS -> GRUB -> Kernel -> Initramfs -> Systemd;
+
+    Systemd -> Network;
+    Systemd -> Login;
+    Systemd -> DBus;
+    Systemd -> Journal;
+
+    Login -> Xorg -> WM;
+    WM -> Terminal -> Shell -> Editor;
+    WM -> FileMgr;
+    WM -> Browser;
+}

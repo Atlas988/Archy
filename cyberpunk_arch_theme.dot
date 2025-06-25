@@ -1,0 +1,63 @@
+
+digraph cyberpunk_arch {
+    rankdir=LR;
+    bgcolor="#0a001f";
+    node [fontname="Fira Code", fontsize=11, style=filled, fillcolor="#29004d", fontcolor="#ff66ff", color="#d633ff", shape=rect];
+
+    subgraph cluster_boot {
+        label="Boot System";
+        color="#9900cc";
+        style=filled;
+        fillcolor="#1a0033";
+
+        BIOS [label="BIOS / UEFI", shape=ellipse];
+        GRUB [label="GRUB Bootloader"];
+        Kernel [label="Linux Kernel"];
+        Initramfs [label="Initramfs"];
+        Systemd [label="Systemd Init"];
+    }
+
+    subgraph cluster_core {
+        label="Core Services";
+        color="#b300ff";
+        style=filled;
+        fillcolor="#200038";
+
+        Network [label="NetworkManager"];
+        Login [label="GDM / TTY"];
+        DBus [label="D-Bus"];
+        Journal [label="Systemd Journal"];
+    }
+
+    subgraph cluster_user {
+        label="User Space";
+        color="#cc33ff";
+        style=filled;
+        fillcolor="#2d004d";
+
+        Xorg [label="Xorg / Wayland"];
+        WM [label="Window Manager (i3 / Hyprland)"];
+        Terminal [label="Kitty / Alacritty"];
+        Shell [label="Zsh / Bash"];
+        Editor [label="Neovim / Code"];
+        Browser [label="Firefox / Chromium"];
+        FileMgr [label="Thunar / Dolphin"];
+    }
+
+    // Boot Flow
+    BIOS -> GRUB -> Kernel -> Initramfs -> Systemd;
+
+    // Core Init Flow
+    Systemd -> Network;
+    Systemd -> Login;
+    Systemd -> DBus;
+    Systemd -> Journal;
+
+    // User Flow
+    Login -> Xorg -> WM;
+    WM -> Terminal -> Shell -> Editor;
+    WM -> FileMgr;
+    WM -> Browser;
+
+    edge [color="#ff00ff", arrowsize=0.9];
+}

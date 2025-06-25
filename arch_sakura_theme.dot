@@ -1,0 +1,75 @@
+
+digraph arch_sakura {
+    rankdir=LR;
+    bgcolor="#1a0b1e";
+    fontname="Fira Code";
+
+    node [
+        shape=rect,
+        fontname="Fira Code",
+        fontsize=12,
+        style="filled,rounded",
+        color="#ff99cc",
+        fillcolor="#331a2f",
+        fontcolor="#ffcce6",
+        penwidth=2
+    ];
+
+    edge [
+        color="#ffb3d9",
+        penwidth=1.5,
+        arrowsize=0.8
+    ];
+
+    subgraph cluster_boot {
+        label="🌸 Boot Sequence 🌸";
+        style=filled;
+        fillcolor="#2d1127";
+        color="#ff66a3";
+
+        BIOS [label="🌸 BIOS / UEFI", shape=ellipse, fillcolor="#4d1a2f"];
+        GRUB [label="🌸 GRUB Bootloader"];
+        Kernel [label="🌸 Linux Kernel"];
+        Initramfs [label="🌸 Initramfs"];
+        Systemd [label="🌸 Systemd Init"];
+    }
+
+    subgraph cluster_core {
+        label="🌸 Core Services 🌸";
+        style=filled;
+        fillcolor="#3d1333";
+        color="#ff4da6";
+
+        Network [label="🌸 NetworkManager"];
+        Login [label="🌸 GDM / TTY"];
+        DBus [label="🌸 D-Bus"];
+        Journal [label="🌸 Journal"];
+    }
+
+    subgraph cluster_user {
+        label="🌸 User Space 🌸";
+        style=filled;
+        fillcolor="#4d1a3c";
+        color="#ff66cc";
+
+        Xorg [label="🌸 Xorg / Wayland"];
+        WM [label="🌸 WM (i3 / Hyprland)"];
+        Terminal [label="🌸 Terminal (Kitty)"];
+        Shell [label="🌸 Shell (Zsh / Bash)"];
+        Editor [label="🌸 Neovim / Code"];
+        Browser [label="🌸 Firefox / Chromium"];
+        FileMgr [label="🌸 File Manager"];
+    }
+
+    BIOS -> GRUB -> Kernel -> Initramfs -> Systemd;
+
+    Systemd -> Network;
+    Systemd -> Login;
+    Systemd -> DBus;
+    Systemd -> Journal;
+
+    Login -> Xorg -> WM;
+    WM -> Terminal -> Shell -> Editor;
+    WM -> FileMgr;
+    WM -> Browser;
+}
