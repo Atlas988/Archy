@@ -1,64 +1,59 @@
 #!/bin/bash
+
+setup-hyprland.sh — Fully automated Hyprland setup for Arch Linux Cyberpunk themed, MLFW-style, Wayland-native environment 
+
 set -e
 
-echo "[*] Updating system..."
+Update system 
+
 sudo pacman -Syu --noconfirm
 
-echo "[*] Installing KDE Plasma desktop and apps..."
-sudo pacman -S --noconfirm plasma-meta kde-applications sddm konsole dolphin ark \
-  spectacle neofetch vlc gwenview pipewire pipewire-pulse wireplumber \
-  firefox ttf-jetbrains-mono ttf-nerd-fonts-symbols unzip git curl
+Install base packages 
 
-echo "[*] Enabling GUI login (sddm)..."
+sudo pacman -S --noconfirm base-devel git curl wget unzip
+
+Install AUR helper (paru) 
+
+if ! command -v paru &>/dev/null; then git clone https://aur.archlinux.org/paru.git ~/paru cd ~/paru && makepkg -si --noconfirm cd ~ && rm -rf ~/paru fi
+
+Core packages for Hyprland + tools 
+
+paru -S --noconfirm hyprland-git waybar rofi wofi kitty 
+swaybg grim slurp wl-clipboard mako playerctl 
+brightnessctl network-manager-applet sddm pavucontrol 
+ttf-jetbrains-mono ttf-nerd-fonts-symbols dunst pipewire pipewire-pulse wireplumber
+
+Enable login manager 
+
 sudo systemctl enable sddm
 
-echo "[*] Installing theme and icons..."
-# Install sweet theme and Tela icons
-paru -S --noconfirm sweet-gtk-theme-git sweet-kde-theme-git tela-icon-theme dracula-cursors-git
+Wallpaper setup 
 
-echo "[*] Applying theme configuration..."
-mkdir -p ~/.local/share/plasma/desktoptheme
-mkdir -p ~/.icons
-mkdir -p ~/.themes
+mkdir -p ~/Pictures curl -Lo ~/Pictures/cyberpunk.jpg "https://wallpaperaccess.com/full/19885.jpg"
 
-# Set KDE global themes (requires logged-in KDE session)
-cat > ~/.config/kdeglobals <<EOF
-[Icons]
-Theme=Tela
+Hyprland config setup 
 
-[General]
-ColorScheme=Sweet
+mkdir -p ~/.config/hypr cat > ~/.config/hypr/hyprland.conf <<EOF exec-once = waybar exec-once = nm-applet exec-once = dunst exec-once = ~/.config/hypr/wallpaper.sh
 
-[PlasmaTheme]
-name=Sweet
-EOF
+$mod = SUPER
 
-cat > ~/.config/gtk-3.0/settings.ini <<EOF
-[Settings]
-gtk-theme-name=Sweet-Dark
-gtk-icon-theme-name=Tela
-EOF
+bind = $mod, RETURN, exec, kitty bind = $mod, Q, killactive bind = $mod, D, exec, wofi --show drun bind = $mod, E, exec, nautilus bind = $mod, F, togglefloating bind = $mod, V, exec, pavucontrol
 
-echo "[*] Setting cursor..."
-cat > ~/.icons/default/index.theme <<EOF
-[Icon Theme]
-Name=Dracula
-Inherits=Dracula
-EOF
+general { gaps_in = 5 gaps_out = 10 border_size = 2 col.active_border = rgba(ff00ffaa) col.inactive_border = rgba(111111aa) layout = dwindle }
 
-echo "[*] Downloading cyberpunk wallpaper..."
-mkdir -p ~/Pictures
-curl -L -o ~/Pictures/cyberpunk.jpg "https://wallpaperaccess.com/full/19885.jpg"
+decoration { rounding = 10 blur { enabled = true size = 6 passes = 2 ignore_opacity = false new_optimizations = true } drop_shadow = true shadow_range = 20 shadow_render_power = 3 col.shadow = rgba(00000088) } EOF
 
-echo "[*] Configuring autostart wallpaper..."
-mkdir -p ~/.config/plasma-workspace/env
-cat > ~/.config/plasma-workspace/env/set-wallpaper.sh <<EOF
-#!/bin/sh
-plasma-apply-wallpaperimage ~/Pictures/cyberpunk.jpg
-EOF
-chmod +x ~/.config/plasma-workspace/env/set-wallpaper.sh
+Wallpaper script 
 
-echo "[*] KDE Plasma setup complete."
-echo "[+] Reboot your system, log into KDE, then:"
-echo "    - Right-click the Start Menu icon > Show Alternatives > Select Application Dashboard"
-echo "    - Go to System Settings > Appearance to confirm Cyberpunk theme applied"
+mkdir -p ~/.config/hypr cat > ~/.config/hypr/wallpaper.sh <<EOF #!/bin/bash swaybg -i ~/Pictures/cyberpunk.jpg --mode fill EOF chmod +x ~/.config/hypr/wallpaper.sh
+
+Waybar config 
+
+mkdir -p ~/.config/waybar cat > ~/.config/waybar/config.jsonc <<EOF { "layer": "top", "position": "top", "modules-left": ["clock", "pulseaudio", "network", "tray"], "modules-center": [], "modules-right": ["battery", "cpu", "memory"] } EOF
+
+Auto start Hyprland session 
+
+echo "exec Hyprland" > ~/.xinitrc
+
+echo "[✓] Hyprland cyberpunk setup complete. Reboot and select 'Hyprland' from SDDM."
+
